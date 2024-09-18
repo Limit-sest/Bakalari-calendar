@@ -5,11 +5,12 @@ from dotenv import set_key, load_dotenv
 import os
 from time import sleep
 
+school_url, username, password, access_token, refresh_token = (None, None, None, None, None)
 
-# TODO
-# using set_key() refresh token pairs when expired
 
-def main():
+def first_login():
+    global school_url, username, password, access_token, refresh_token
+
     # Load/create configuration
     if os.path.isfile(".env"):
         load_dotenv(".env")
@@ -43,7 +44,22 @@ def main():
             f.write(f"PASSWORD={password}\n")
             f.close()
 
+def refresh_tokens():
+    global school_url, username, password, access_token, refresh_token
+
+    access_token, refresh_token = bakalari.get_token(school_url, username, password, refresh_token)
+    set_key(".env", "ACCESS_TOKEN", access_token)
+    set_key(".env", "REFRESH_TOKEN", refresh_token)
+
+def main():
+    global school_url, username, password, access_token, refresh_token
+
+    first_login()
+
     while True:
+        if bakalari.get_timetable(school_url, access_token) == "401 Error":
+            refresh_tokens()
+            bakalari.get_timetable(school_url, access_token)
         sleep(10 * 60)
 
 
