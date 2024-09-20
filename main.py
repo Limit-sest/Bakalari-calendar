@@ -1,6 +1,6 @@
 import sys
 import bakalari
-import calendar
+import timetable_cal
 import re
 from dotenv import set_key, load_dotenv
 import os
@@ -45,12 +45,14 @@ def first_login():
             f.write(f"PASSWORD={password}\n")
             f.close()
 
+
 def refresh_tokens():
     global school_url, username, password, access_token, refresh_token
 
     access_token, refresh_token = bakalari.get_token(school_url, username, password, refresh_token)
     set_key(".env", "ACCESS_TOKEN", access_token)
     set_key(".env", "REFRESH_TOKEN", refresh_token)
+
 
 def main():
     global school_url, username, password, access_token, refresh_token
@@ -61,6 +63,9 @@ def main():
         if bakalari.get_timetable(school_url, access_token) == "401 Error":
             refresh_tokens()
             bakalari.get_timetable(school_url, access_token)
+
+        timetable_cal.parse_json_timetable()
+        timetable_cal.create_ics()
         sleep(10 * 60)
 
 

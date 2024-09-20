@@ -3,6 +3,7 @@ import json
 import requests
 from datetime import date
 
+
 def get_token(school, username, password, refresh_token=None):
     url = f'{school}/api/login'
     head = {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -27,6 +28,7 @@ def get_token(school, username, password, refresh_token=None):
         return response.json()['access_token'], response.json()['refresh_token']
     else:
         sys.exit(response.json()['error_description'])
+
 
 def get_timetable(school, token):
     url = f'{school}/api/3/timetable/actual?date={date.today().strftime("%Y-%m-%d")}'
