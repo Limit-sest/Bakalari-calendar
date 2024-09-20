@@ -46,3 +46,12 @@ def parse_json_timetable():
 
                 timetable.append(obj)
 
+
+def create_ics():
+    global timetable
+
+    c = ics.Calendar()
+    e = ics.Event()
+
+    with open('timetable.ics', 'w') as f:
+        f.writelines(c.serialize_iter())
