@@ -1,15 +1,17 @@
 import json
 import ics
 import arrow
+import yaml
+from pathlib import Path
 
 # Format: [{subject:"Math", location:"Room 123", start:"", end:"", teacher:"", changes:""/None}, {...}, ...]
 timetable = []
 
 
-def parse_json_timetable():
+def parse_json_timetable(filename: str):
     global timetable
 
-    with open('timetable.json', 'r') as timetable_file:
+    with open(filename, 'r') as timetable_file:
         rooms = {}
         subjects = {}
         teachers = {}
@@ -68,5 +70,11 @@ def create_ics():
 
         c.events.add(e)
 
-    with open('timetable.ics', 'w', encoding='utf-8') as f:
+    with open('config.yml', 'r') as config_file:
+        config = yaml.safe_load(config_file)
+
+    ics_path = Path(config['path'])
+    ics_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(ics_path, 'w', encoding='utf-8') as f:
         f.writelines(c.serialize_iter())

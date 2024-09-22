@@ -1,7 +1,7 @@
 import sys
 import json
 import requests
-from datetime import date
+from datetime import date, timedelta
 
 
 def get_token(school, username, password, refresh_token=None):
@@ -30,13 +30,19 @@ def get_token(school, username, password, refresh_token=None):
         sys.exit(response.json()['error_description'])
 
 
-def get_timetable(school, token):
-    url = f'{school}/api/3/timetable/actual?date={date.today().strftime("%Y-%m-%d")}'
+def get_timetable(school, token, future: bool = False):
+    if future:
+        url = f'{school}/api/3/timetable/actual?date={(date.today() + timedelta(weeks=1)).strftime("%Y-%m-%d")}'
+        filename = 'timetable_future.json'
+    else:
+        url = f'{school}/api/3/timetable/actual?date={date.today().strftime("%Y-%m-%d")}'
+        filename = 'timetable.json'
+
     head = {'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': f'Bearer {token}'}
 
     response = requests.get(url, headers=head)
     if response.status_code == 200:
-        with open('timetable.json', 'w') as timetable:
+        with open(filename, 'w') as timetable:
             json.dump(response.json(), timetable, indent=4)
     elif response.status_code == 401:
         return "401 Error"

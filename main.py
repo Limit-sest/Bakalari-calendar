@@ -5,6 +5,7 @@ import re
 from dotenv import set_key, load_dotenv
 import os
 from time import sleep
+import yaml
 
 school_url, username, password, access_token, refresh_token = (None, None, None, None, None)
 
@@ -57,6 +58,9 @@ def refresh_tokens():
 def main():
     global school_url, username, password, access_token, refresh_token
 
+    with open('config.yml', 'r') as config_file:
+        config = yaml.safe_load(config_file)
+
     first_login()
 
     while True:
@@ -64,7 +68,15 @@ def main():
             refresh_tokens()
             bakalari.get_timetable(school_url, access_token)
 
-        timetable_cal.parse_json_timetable()
+        if config['download_future']:
+            if bakalari.get_timetable(school_url, access_token, True) == "401 Error":
+                refresh_tokens()
+                bakalari.get_timetable(school_url, access_token, True)
+
+        timetable_cal.parse_json_timetable('timetable.json')
+        if config['download_future']:
+            timetable_cal.parse_json_timetable('timetable_future.json')
+
         timetable_cal.create_ics()
         sleep(10 * 60)
 

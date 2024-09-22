@@ -3,3 +3,4 @@
 .env
 /timetable.json
 /timetable.ics
+/timetable_future.json

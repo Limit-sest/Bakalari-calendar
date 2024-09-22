@@ -7,7 +7,7 @@ Tento projekt umožňuje export rozvrhu ze systému Bakaláři do formátu iCal 
 Nejdříve nainstalujte všechny požadované balíčky pomocí příkazu
 
 ```bash
-pip install ics arrow requests dotenv
+pip install ics arrow requests python-dotenv PyYAML
 ```
 
 ## **Co je iCal soubor?**

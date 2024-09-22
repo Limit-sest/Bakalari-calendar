@@ -1,0 +1,5 @@
+# Path where do you want the calendar file to be saved. Useful for hosting the file on a http(s) server
+path: ./timetable.ics # Default: ./timetable.ics
+
+# Toggle if the program should also download data 1 week in advance.
+download_future: true # Default: true
