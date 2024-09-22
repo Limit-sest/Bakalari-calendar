@@ -10,6 +10,7 @@ timetable = []
 
 def parse_json_timetable(filename: str):
     global timetable
+    timetable = []
 
     with open(filename, 'r') as timetable_file:
         rooms = {}
