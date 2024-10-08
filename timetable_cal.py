@@ -20,19 +20,13 @@ def parse_json_timetable(filename: str):
         timetable_json = json.load(timetable_file)
 
         for room in timetable_json['Rooms']:
-            if room['Abbrev'] is None:
-                rooms[room['Id']] = '?'
-            else:
-                rooms[room['Id']] = room['Abbrev']
+            rooms[room['Id']] = room['Abbrev']
 
         for subject in timetable_json['Subjects']:
             subjects[subject['Id']] = subject['Name']
 
         for teacher in timetable_json['Teachers']:
-            if teacher['Name'] is None:
-                teachers[teacher['Id']] = '?'
-            else:
-                teachers[teacher['Id']] = teacher['Name']
+            teachers[teacher['Id']] = teacher['Name']
 
         for hour in timetable_json['Hours']:
             hours[hour['Id']] = {"start": hour['BeginTime'], "end": hour['EndTime']}
@@ -44,12 +38,24 @@ def parse_json_timetable(filename: str):
                 end_h, end_m = hours[lesson['HourId']]['end'].split(':')
 
                 obj = {
-                    'location': rooms[lesson['RoomId']],
-                    'subject': subjects[lesson['SubjectId']],
-                    'teacher': teachers[lesson['TeacherId']],
                     'start': date.replace(hour=int(start_h), minute=int(start_m)),
                     'end': date.replace(hour=int(end_h), minute=int(end_m))
                 }
+
+                if lesson['RoomId'] is None:
+                    obj['location'] = '?'
+                else:
+                    obj['location'] = rooms[lesson['RoomId']]
+
+                if lesson['SubjectId'] is None:
+                    obj['subject'] = '?'
+                else:
+                    obj['subject'] = subjects[lesson['SubjectId']]
+
+                if lesson['TeacherId'] is None:
+                    obj['teacher'] = '?'
+                else:
+                    obj['teacher'] = teachers[lesson['TeacherId']]
 
                 if lesson['Change']:
                     obj['change'] = lesson['Change']['Description']
