@@ -20,13 +20,19 @@ def parse_json_timetable(filename: str):
         timetable_json = json.load(timetable_file)
 
         for room in timetable_json['Rooms']:
-            rooms[room['Id']] = room['Abbrev']
+            if room['Abbrev'] is None:
+                rooms[room['Id']] = '?'
+            else:
+                rooms[room['Id']] = room['Abbrev']
 
         for subject in timetable_json['Subjects']:
             subjects[subject['Id']] = subject['Name']
 
         for teacher in timetable_json['Teachers']:
-            teachers[teacher['Id']] = teacher['Name']
+            if teacher['Name'] is None:
+                teachers[teacher['Id']] = '?'
+            else:
+                teachers[teacher['Id']] = teacher['Name']
 
         for hour in timetable_json['Hours']:
             hours[hour['Id']] = {"start": hour['BeginTime'], "end": hour['EndTime']}
