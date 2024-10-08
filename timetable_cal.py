@@ -58,7 +58,10 @@ def parse_json_timetable(filename: str):
                     obj['teacher'] = teachers[lesson['TeacherId']]
 
                 if lesson['Change']:
-                    obj['change'] = lesson['Change']['Description']
+                    if lesson['Change']['ChangeType'] == "Canceled":
+                        continue
+                    else:
+                        obj['change'] = lesson['Change']['Description']
                 else:
                     obj['change'] = None
 
