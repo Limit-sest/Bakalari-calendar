@@ -7,6 +7,9 @@ from pathlib import Path
 # Format: [{subject:"Math", location:"Room 123", start:"", end:"", teacher:"", changes:""/None}, {...}, ...]
 timetable = []
 
+with open('config.yml', 'r') as config_file:
+    config = yaml.safe_load(config_file)
+
 
 def parse_json_timetable(filename: str):
     global timetable
@@ -32,6 +35,9 @@ def parse_json_timetable(filename: str):
             hours[hour['Id']] = {"start": hour['BeginTime'], "end": hour['EndTime']}
 
         for day in timetable_json['Days']:
+            if day['DayOfWeek'] in config['days_to_ignore']:
+                continue
+
             date = arrow.get(day['Date'])
             for lesson in day['Atoms']:
                 start_h, start_m = hours[lesson['HourId']]['start'].split(':')
@@ -85,9 +91,6 @@ def create_ics():
         e.begin = lesson['start']
 
         c.events.add(e)
-
-    with open('config.yml', 'r') as config_file:
-        config = yaml.safe_load(config_file)
 
     ics_path = Path(config['path'])
     ics_path.parent.mkdir(parents=True, exist_ok=True)
