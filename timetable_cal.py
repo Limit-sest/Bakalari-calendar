@@ -87,7 +87,8 @@ def create_ics():
             e = ics.Event()
             e.name = lesson['subject']
             if lesson['change']:
-                e.description = f"{lesson['teacher']} \n!ZMĚNA: {lesson['change']}"
+                e.description = f"{lesson['teacher']} \n(*) {lesson['change']}"
+                e.name = f"(*) {lesson['subject']}"
             else:
                 e.description = lesson['teacher']
             e.location = lesson['location']
