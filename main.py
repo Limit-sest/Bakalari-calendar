@@ -63,22 +63,20 @@ def main():
 
     first_login()
 
-    while True:
-        if bakalari.get_timetable(school_url, access_token) == "401 Error":
+    if bakalari.get_timetable(school_url, access_token) == "401 Error":
+        refresh_tokens()
+        bakalari.get_timetable(school_url, access_token)
+
+    if config['download_future']:
+        if bakalari.get_timetable(school_url, access_token, True) == "401 Error":
             refresh_tokens()
-            bakalari.get_timetable(school_url, access_token)
+            bakalari.get_timetable(school_url, access_token, True)
 
-        if config['download_future']:
-            if bakalari.get_timetable(school_url, access_token, True) == "401 Error":
-                refresh_tokens()
-                bakalari.get_timetable(school_url, access_token, True)
+    timetable_cal.parse_json_timetable('timetable.json')
+    if config['download_future']:
+        timetable_cal.parse_json_timetable('timetable_future.json')
 
-        timetable_cal.parse_json_timetable('timetable.json')
-        if config['download_future']:
-            timetable_cal.parse_json_timetable('timetable_future.json')
-
-        timetable_cal.create_ics()
-        sleep(10 * 60)
+    timetable_cal.create_ics()
 
 
 if __name__ == '__main__':
