@@ -5,3 +5,4 @@
 /timetable.ics
 /timetable_future.json
 .ruff_cache/
+__pycache__/
