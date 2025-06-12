@@ -11,9 +11,9 @@ def refresh_tokens():
     access_token, refresh_token = bakalari.get_token(school_url, username, password, refresh_token)
 
 @click.command()
-@click.argument('school_url', type=str, required=False)
-@click.argument('username', type=str, required=False)
-@click.argument('password', type=str, required=False)
+@click.argument('school_url', type=str, required=True)
+@click.argument('username', type=str, required=True)
+@click.argument('password', type=str, required=True)
 def main():
     with open('config.yml', 'r') as config_file:
         config = yaml.safe_load(config_file)
