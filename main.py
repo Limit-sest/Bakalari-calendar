@@ -4,7 +4,6 @@ import timetable_cal
 import re
 from dotenv import set_key, load_dotenv
 import os
-from time import sleep
 import yaml
 
 school_url, username, password, access_token, refresh_token = (None, None, None, None, None)
