@@ -1,44 +1,45 @@
-import bakalari
-import timetable_cal
-import yaml
 import click
+import yaml
 
-school_url, username, password, access_token, refresh_token = (None, None, None, None, None)
+import bakalari
+from timetable_cal import create_ics, parse_json_timetable
 
-def refresh_tokens(s_url=None, user=None, pwd=None):
-    global school_url, username, password, access_token, refresh_token
 
-    # Use provided args or fall back to globals
-    school_url = s_url or school_url
-    username = user or username
-    password = pwd or password
+def ensure_access_token(school_url: str, username: str, password: str, access_token: str | None, refresh_token: str | None):
+    if not school_url or not username or not password:
+        raise RuntimeError('Missing school URL, username or password')
+    if not access_token or not refresh_token:
+        return bakalari.get_token(school_url, username, password)
+    return access_token, refresh_token
 
-    access_token, refresh_token = bakalari.get_token(school_url, username, password, refresh_token)
 
 @click.command()
 @click.argument('s_url', type=str, required=True)
 @click.argument('user', type=str, required=True)
 @click.argument('pwd', type=str, required=True)
-def main(s_url, user, pwd):
-    global school_url, username, password
-    school_url, username, password = s_url, user, pwd
-
-    with open('config.yml', 'r') as config_file:
+def main(s_url: str = '', user: str = '', pwd: str = '') -> None:
+    with open('config.yml', 'r', encoding='utf-8') as config_file:
         config = yaml.safe_load(config_file)
-    if bakalari.get_timetable(school_url, access_token) == "401 Error":
-        refresh_tokens(school_url, username, password)
-        bakalari.get_timetable(school_url, access_token)
 
-    if config['download_future']:
-        if bakalari.get_timetable(school_url, access_token, True) == "401 Error":
-            refresh_tokens()
-            bakalari.get_timetable(school_url, access_token, True)
+    access_token: str | None = None
+    refresh_token: str | None = None
+    access_token, refresh_token = ensure_access_token(s_url, user, pwd, access_token, refresh_token)
 
-    timetable_cal.parse_json_timetable('timetable.json')
-    if config['download_future']:
-        timetable_cal.parse_json_timetable('timetable_future.json')
+    if bakalari.get_timetable(s_url, access_token) == "401 Error":
+        access_token, refresh_token = bakalari.get_token(s_url, user, pwd, refresh_token)
+        bakalari.get_timetable(s_url, access_token)
 
-    timetable_cal.create_ics()
+    if config.get('download_future'):
+        if bakalari.get_timetable(s_url, access_token, True) == "401 Error":
+            access_token, refresh_token = bakalari.get_token(s_url, user, pwd, refresh_token)
+            bakalari.get_timetable(s_url, access_token, True)
+
+    lessons = parse_json_timetable('timetable.json', config.get('days_to_ignore'))
+    if config.get('download_future'):
+        lessons += parse_json_timetable('timetable_future.json', config.get('days_to_ignore'))
+
+    create_ics(lessons, config.get('path', './timetable.ics'))
+
 
 if __name__ == '__main__':
     main()

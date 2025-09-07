@@ -1,48 +1,61 @@
-import sys
+from __future__ import annotations
+
 import json
-import requests
+from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import Optional, Tuple
+
+import requests
 
 
-def get_token(school, username, password, refresh_token=None):
-    url = f'{school}/api/login'
-    head = {'Content-Type': 'application/x-www-form-urlencoded'}
+def get_token(
+    school: str,
+    username: str,
+    password: str,
+    refresh_token: Optional[str] = None,
+) -> Tuple[str, str]:
+    url = f"{school}/api/login"
+    head = {"Content-Type": "application/x-www-form-urlencoded"}
 
     if refresh_token:
         body = f"client_id=ANDR&grant_type=refresh_token&refresh_token={refresh_token}"
         print("Getting tokens using refresh token")
     else:
-        body = f'client_id=ANDR&grant_type=password&username={username}&password={password}'
+        body = f"client_id=ANDR&grant_type=password&username={username}&password={password}"
         print("Getting tokens using username and password")
 
     response = requests.post(url, data=body, headers=head)
 
-    # Use username and password if refresh token is expired/invalid
-    if response.status_code == 400 and response.json()["error_description"] == "The specified token is invalid.":
-        body = f'client_id=ANDR&grant_type=password&username={username}&password={password}'
-        print("Getting tokens using refresh token")
+    # Fallback to username/password if refresh token invalid/expired
+    if response.status_code == 400 and response.json().get("error_description") == "The specified token is invalid.":
+        body = f"client_id=ANDR&grant_type=password&username={username}&password={password}"
+        print("Refresh token invalid, retrying with username and password")
         response = requests.post(url, data=body, headers=head)
 
     if response.status_code == 200:
         print("Obtained new pair of tokens")
-        return response.json()['access_token'], response.json()['refresh_token']
-    else:
-        sys.exit(response.json()['error_description'])
+        data = response.json()
+        return data["access_token"], data["refresh_token"]
+
+    # Raise a clear error for callers to handle
+    raise RuntimeError(response.json().get("error_description", f"Login failed: {response.status_code}"))
 
 
-def get_timetable(school, token, future: bool = False):
+def get_timetable(school: str, token: str, future: bool = False) -> Optional[str]:
     if future:
-        url = f'{school}/api/3/timetable/actual?date={(date.today() + timedelta(weeks=1)).strftime("%Y-%m-%d")}'
-        filename = 'timetable_future.json'
+        url = f"{school}/api/3/timetable/actual?date={(date.today() + timedelta(weeks=1)).strftime('%Y-%m-%d')}"
+        filename = "timetable_future.json"
     else:
-        url = f'{school}/api/3/timetable/actual?date={date.today().strftime("%Y-%m-%d")}'
-        filename = 'timetable.json'
+        url = f"{school}/api/3/timetable/actual?date={date.today().strftime('%Y-%m-%d')}"
+        filename = "timetable.json"
 
-    head = {'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': f'Bearer {token}'}
+    head = {"Content-Type": "application/x-www-form-urlencoded", "Authorization": f"Bearer {token}"}
 
     response = requests.get(url, headers=head)
     if response.status_code == 200:
-        with open(filename, 'w') as timetable:
-            json.dump(response.json(), timetable, indent=4)
-    elif response.status_code == 401:
+        with open(filename, 'w', encoding='utf-8') as timetable:
+            json.dump(response.json(), timetable, indent=4, ensure_ascii=False)
+        return None
+    if response.status_code == 401:
         return "401 Error"
+    raise RuntimeError(f"Failed to fetch timetable: {response.status_code}")

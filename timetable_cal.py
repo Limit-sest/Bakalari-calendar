@@ -1,106 +1,81 @@
-import json
-import ics
-import arrow
-import yaml
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional
 
-# Format: [{subject:"Math", location:"Room 123", start:"", end:"", teacher:"", changes:""/None}, {...}, ...]
-timetable = []
-
-with open('config.yml', 'r') as config_file:
-    config = yaml.safe_load(config_file)
+import arrow
+import ics
+import json
 
 
-def parse_json_timetable(filename: str):
-    global timetable
-    timetable = []
+Lesson = Dict[str, Any]
 
-    try:
-        with open(filename, 'r') as timetable_file:
-            rooms = {}
-            subjects = {}
-            teachers = {}
-            hours = {}
-            timetable_json = json.load(timetable_file)
 
-            for room in timetable_json['Rooms']:
-                rooms[room['Id']] = room['Abbrev']
+def parse_json_timetable(filename: str, days_to_ignore: Iterable[int] | None = None) -> List[Lesson]:
+    days_to_ignore = set(days_to_ignore or [])
+    lessons: List[Lesson] = []
 
-            for subject in timetable_json['Subjects']:
-                subjects[subject['Id']] = subject['Name']
+    with open(filename, 'r', encoding='utf-8') as timetable_file:
+        data = json.load(timetable_file)
 
-            for teacher in timetable_json['Teachers']:
-                teachers[teacher['Id']] = teacher['Name']
+    rooms: Dict[int, str] = {room['Id']: room['Abbrev'] for room in data.get('Rooms', [])}
+    subjects: Dict[int, str] = {subject['Id']: subject['Name'] for subject in data.get('Subjects', [])}
+    teachers: Dict[int, str] = {teacher['Id']: teacher['Name'] for teacher in data.get('Teachers', [])}
+    hours: Dict[int, Dict[str, str]] = {
+        hour['Id']: {"start": hour['BeginTime'], "end": hour['EndTime']} for hour in data.get('Hours', [])
+    }
 
-            for hour in timetable_json['Hours']:
-                hours[hour['Id']] = {"start": hour['BeginTime'], "end": hour['EndTime']}
+    for day in data.get('Days', []):
+        if day.get('DayOfWeek') in days_to_ignore:
+            continue
 
-            for day in timetable_json['Days']:
-                if day['DayOfWeek'] in config['days_to_ignore']:
+        date = arrow.get(day['Date'])
+        for atom in day.get('Atoms', []):
+            hour_def = hours.get(atom['HourId'])
+            if not hour_def:
+                continue
+
+            start_h, start_m = hour_def['start'].split(':')
+            end_h, end_m = hour_def['end'].split(':')
+
+            item: Lesson = {
+                'start': date.replace(hour=int(start_h), minute=int(start_m)),
+                'end': date.replace(hour=int(end_h), minute=int(end_m)),
+                'location': rooms.get(atom.get('RoomId')) or '?',
+                'subject': subjects.get(atom.get('SubjectId')) or '?',
+                'teacher': teachers.get(atom.get('TeacherId')) or '?',
+                'change': None,
+            }
+
+            change = atom.get('Change')
+            if change:
+                if change.get('ChangeType') == 'Canceled':
                     continue
+                item['change'] = change.get('Description')
 
-                date = arrow.get(day['Date'])
-                for lesson in day['Atoms']:
-                    start_h, start_m = hours[lesson['HourId']]['start'].split(':')
-                    end_h, end_m = hours[lesson['HourId']]['end'].split(':')
+            lessons.append(item)
 
-                    obj = {
-                        'start': date.replace(hour=int(start_h), minute=int(start_m)),
-                        'end': date.replace(hour=int(end_h), minute=int(end_m))
-                    }
-
-                    if lesson['RoomId'] is None:
-                        obj['location'] = '?'
-                    else:
-                        obj['location'] = rooms[lesson['RoomId']]
-
-                    if lesson['SubjectId'] is None:
-                        obj['subject'] = '?'
-                    else:
-                        obj['subject'] = subjects[lesson['SubjectId']]
-
-                    if lesson['TeacherId'] is None:
-                        obj['teacher'] = '?'
-                    else:
-                        obj['teacher'] = teachers[lesson['TeacherId']]
-
-                    if lesson['Change']:
-                        if lesson['Change']['ChangeType'] == "Canceled":
-                            continue
-                        else:
-                            obj['change'] = lesson['Change']['Description']
-                    else:
-                        obj['change'] = None
-
-                    timetable.append(obj)
-    except Exception as e:
-        print(e)
+    return lessons
 
 
-def create_ics():
-    global timetable
+def create_ics(lessons: Iterable[Lesson], output_path: str | Path) -> None:
+    cal = ics.Calendar()
 
-    c = ics.Calendar()
+    for lesson in lessons:
+        event = ics.Event()
+        subject = lesson.get('subject', '?')
+        teacher = lesson.get('teacher', '')
+        change = lesson.get('change')
 
-    try:
-        for lesson in timetable:
-            e = ics.Event()
-            e.name = lesson['subject']
-            if lesson['change']:
-                e.description = f"{lesson['teacher']} \n(*) {lesson['change']}"
-                e.name = f"(*) {lesson['subject']}"
-            else:
-                e.description = lesson['teacher']
-            e.location = lesson['location']
-            e.end = lesson['end']
-            e.begin = lesson['start']
+        event.name = f"(*) {subject}" if change else subject
+        event.description = f"{teacher} \n(*) {change}" if change else teacher
+        event.location = lesson.get('location', '')
+        event.begin = lesson['start']
+        event.end = lesson['end']
 
-            c.events.add(e)
-    except Exception as e:
-        print(e)
+        cal.events.add(event)
 
-    ics_path = Path(config['path'])
+    ics_path = Path(output_path)
     ics_path.parent.mkdir(parents=True, exist_ok=True)
-
     with open(ics_path, 'w', encoding='utf-8') as f:
-        f.writelines(c.serialize_iter())
+        f.writelines(cal.serialize_iter())
