@@ -67,8 +67,8 @@ def create_ics(lessons: Iterable[Lesson], output_path: str | Path) -> None:
         teacher = lesson.get('teacher', '')
         change = lesson.get('change')
 
-        event.name = f"(*) {subject}" if change else subject
-        event.description = f"{teacher} \n(*) {change}" if change else teacher
+        event.name = f"[Z] {lesson.get('location', '')} - {subject}" if change else f"{lesson.get('location', '')} - {subject}"
+        event.description = f"{teacher} \n[Z] {change}" if change else teacher
         event.location = lesson.get('location', '')
         event.begin = lesson['start']
         event.end = lesson['end']
